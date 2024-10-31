@@ -8,6 +8,7 @@ const (
 	msgErrMissingGRPCServer = "missing grpc server address and port"
 	msgErrMissingToken      = "missing user token, please, login"
 	msgErrInitGRPC          = "error initializing GRPC client: "
+	msgErrNoDBPath          = "missing local db path"
 )
 
 const secretName string = "name"

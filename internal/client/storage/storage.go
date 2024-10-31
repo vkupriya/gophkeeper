@@ -19,6 +19,8 @@ import (
 	"github.com/vkupriya/gophkeeper/internal/client/models"
 )
 
+const ctxTimeoutDefault time.Duration = time.Second * 3
+
 var (
 	ErrUserAlreadyExists   = errors.New("user already exists")
 	ErrUserNotFound        = errors.New("user not found")
@@ -31,10 +33,10 @@ type SQLiteDB struct {
 	DB *sql.DB
 }
 
-func NewSQLiteDB() (*SQLiteDB, error) {
-	db, err := sql.Open("sqlite3", "./secrets.db")
+func NewSQLiteDB(dbpath string) (*SQLiteDB, error) {
+	db, err := sql.Open("sqlite3", dbpath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open sqlite connection: %w", err)
+		return nil, fmt.Errorf("failed to open sqlite db: %w", err)
 	}
 	return &SQLiteDB{DB: db}, nil
 }
@@ -66,7 +68,7 @@ func RunMigrations(s *SQLiteDB) error {
 func (s *SQLiteDB) SecretList() ([]*models.SecretItem, error) {
 	db := s.DB
 	secrets := make([]*models.SecretItem, 0)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	ctx, cancel := context.WithTimeout(context.Background(), ctxTimeoutDefault)
 	defer cancel()
 
 	querySQL := "SELECT name, type, version FROM secrets"
@@ -75,7 +77,11 @@ func (s *SQLiteDB) SecretList() ([]*models.SecretItem, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error querying secrets db: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			fmt.Printf("failed to close rows")
+		}
+	}()
 
 	for rows.Next() {
 		var s models.SecretItem
@@ -98,7 +104,7 @@ func (s *SQLiteDB) SecretList() ([]*models.SecretItem, error) {
 
 func (s *SQLiteDB) SecretDeleteAll() error {
 	db := s.DB
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	ctx, cancel := context.WithTimeout(context.Background(), ctxTimeoutDefault)
 	defer cancel()
 
 	querySQL := "DELETE FROM secrets"
@@ -113,7 +119,7 @@ func (s *SQLiteDB) SecretDeleteAll() error {
 
 func (s *SQLiteDB) SecretAdd(secret *models.Secret) error {
 	db := s.DB
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	ctx, cancel := context.WithTimeout(context.Background(), ctxTimeoutDefault)
 	defer cancel()
 
 	querySQL := "INSERT INTO secrets (name, type, meta, data, version) VALUES(?,?,?,?,?)"
@@ -128,7 +134,7 @@ func (s *SQLiteDB) SecretAdd(secret *models.Secret) error {
 func (s *SQLiteDB) SecretGet(name string) (*models.Secret, error) {
 	db := s.DB
 	var secret models.Secret
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	ctx, cancel := context.WithTimeout(context.Background(), ctxTimeoutDefault)
 	defer cancel()
 
 	querySQL := "SELECT * FROM secrets WHERE name=?"

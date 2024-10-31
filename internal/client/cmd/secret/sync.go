@@ -29,7 +29,12 @@ var SyncCmd = &cobra.Command{
 			log.Fatal("Missing secretkey, update configuration file.")
 		}
 
-		store, err := storage.NewSQLiteDB()
+		dbpath, _ := cmd.Flags().GetString("dbpath")
+		if dbpath == "" {
+			log.Fatal(msgErrNoDBPath)
+		}
+
+		store, err := storage.NewSQLiteDB(dbpath)
 		if err != nil {
 			log.Fatal(msgErrInitGRPC, err)
 		}

@@ -47,7 +47,11 @@ var GetCmd = &cobra.Command{
 		if err != nil {
 			if errors.Is(err, grpcclient.ErrServerUnavailable) {
 				fmt.Println("server is unavailable, attempting to read secret from local DB.")
-				store, err := storage.NewSQLiteDB()
+				dbpath, _ := cmd.Flags().GetString("dbpath")
+				if dbpath == "" {
+					log.Fatal(msgErrNoDBPath)
+				}
+				store, err := storage.NewSQLiteDB(dbpath)
 				if err != nil {
 					log.Fatal("Error in setting up DB: ", err)
 				}
