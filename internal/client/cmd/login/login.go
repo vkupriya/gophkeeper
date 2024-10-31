@@ -11,6 +11,8 @@ import (
 	"github.com/vkupriya/gophkeeper/internal/client/helpers"
 )
 
+const serverStr = "server"
+
 // LoginCmd represents the login command.
 var LoginCmd = &cobra.Command{
 	Use:   "login",
@@ -18,9 +20,9 @@ var LoginCmd = &cobra.Command{
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Check host flag
-		server, _ := cmd.Flags().GetString("server")
+		server, _ := cmd.Flags().GetString(serverStr)
 		if server == "" {
-			server = viper.GetViper().GetString("server")
+			server = viper.GetViper().GetString(serverStr)
 		}
 		if server == "" {
 			log.Fatal("server not specified.")
@@ -60,7 +62,7 @@ var LoginCmd = &cobra.Command{
 			}
 			token = strings.Split(token, ":")[1]
 			token = strings.ReplaceAll(token, `"`, "")
-			viper.Set("server", server)
+			viper.Set(serverStr, server)
 			viper.Set("token", token)
 			if err = viper.WriteConfig(); err != nil {
 				log.Fatal("Error writing configuration file: ", err)
