@@ -30,7 +30,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.gk.yaml)")
 	rootCmd.PersistentFlags().StringVar(&server, "server", "127.0.0.1:3200", "gophkeeper server address:port")
-	rootCmd.PersistentFlags().StringVar(&dbpath, "db", "./secrets.db", "path to sqlite local database")
+	rootCmd.PersistentFlags().StringVar(&dbpath, "dbpath", "./secrets.db", "path to sqlite local database")
 	rootCmd.AddCommand(InitCmd)
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(login.LoginCmd)

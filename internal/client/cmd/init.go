@@ -14,6 +14,7 @@ var InitCmd = &cobra.Command{
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		dbpath, _ := cmd.Flags().GetString("dbpath")
+		fmt.Println("DB path: ", dbpath)
 		if dbpath == "" {
 			log.Fatal("missing local db path")
 		}
