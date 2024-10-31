@@ -19,15 +19,20 @@ var ListCmd = &cobra.Command{
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		var secrets []*models.SecretItem
-		token := viper.GetViper().GetString("token")
+		server := viper.GetViper().GetString(hostGRPC)
+		if server == "" {
+			log.Fatal(msgErrMissingGRPCServer)
+		}
+
+		token := viper.GetViper().GetString(tokenJWT)
 		if token == "" {
-			fmt.Printf("Missing token, please, login.")
+			log.Fatal(msgErrMissingToken)
 		}
 
 		svc := grpcclient.NewService()
 
-		if err := grpcclient.NewGRPCClient(svc); err != nil {
-			fmt.Println("error initializing GRPC client: ", err)
+		if err := grpcclient.NewGRPCClient(svc, server); err != nil {
+			log.Fatal(msgErrInitGRPC, err)
 		}
 
 		secrets, err := svc.ListSecrets(token)
@@ -38,14 +43,20 @@ var ListCmd = &cobra.Command{
 				if err != nil {
 					log.Fatal("Error in setting up DB: ", err)
 				}
-				defer store.DB.Close()
+				defer func() {
+					if err := store.DB.Close(); err != nil {
+						log.Fatal("failed to close local DB")
+					}
+				}()
+
 				secrets, err = store.SecretList()
 				if err != nil {
-					fmt.Println("failed to read secrets from local DB", err)
+					log.Fatal("failed to read secrets from local DB", err)
 				}
 
+			} else {
+				log.Fatal("error getting list of secrets: ", err)
 			}
-			fmt.Println("error getting list of secrets: ", err)
 		}
 
 		if len(secrets) != 0 {
@@ -53,8 +64,4 @@ var ListCmd = &cobra.Command{
 			fmt.Println(string(res))
 		}
 	},
-}
-
-func init() {
-	AddCmd.Flags().StringP("server", "s", "", "GophKeeper server.")
 }

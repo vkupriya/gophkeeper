@@ -27,8 +27,7 @@ func NewService() *Service {
 	return &Service{}
 }
 
-func NewGRPCClient(s *Service) error {
-	grpcHost := "127.0.0.1:3200"
+func NewGRPCClient(s *Service, grpcHost string) error {
 
 	conn, err := grpc.NewClient(grpcHost, grpc.WithTransportCredentials((insecure.NewCredentials())))
 	if err != nil {

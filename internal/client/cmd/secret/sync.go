@@ -15,24 +15,28 @@ var SyncCmd = &cobra.Command{
 	Short: "sync secrets with Gophkeeper server",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		token := viper.GetViper().GetString("token")
+		server := viper.GetViper().GetString(hostGRPC)
+		if server == "" {
+			log.Fatal(msgErrMissingGRPCServer)
+		}
+		token := viper.GetViper().GetString(tokenJWT)
 		if token == "" {
-			fmt.Printf("Missing token, please, login.")
+			log.Fatal(msgErrMissingToken)
 		}
 
 		key := viper.GetViper().GetString("secretkey")
 		if key == "" {
-			fmt.Printf("Missing secretkey, update configuration file.")
+			log.Fatal("Missing secretkey, update configuration file.")
 		}
 
 		store, err := storage.NewSQLiteDB()
 		if err != nil {
-			log.Fatal("Error in setting up DB: ", err)
+			log.Fatal(msgErrInitGRPC, err)
 		}
 
 		svc := grpcclient.NewService()
 
-		if err := grpcclient.NewGRPCClient(svc); err != nil {
+		if err := grpcclient.NewGRPCClient(svc, server); err != nil {
 			log.Fatal("error initializing GRPC client: ", err)
 		}
 
@@ -60,8 +64,4 @@ var SyncCmd = &cobra.Command{
 		}
 		fmt.Println("successfully synchronised secret db.")
 	},
-}
-
-func init() {
-	SyncCmd.Flags().StringP("server", "s", "", "GophKeeper server.")
 }

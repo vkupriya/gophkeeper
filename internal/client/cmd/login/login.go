@@ -41,7 +41,7 @@ var LoginCmd = &cobra.Command{
 
 			svc := grpcclient.NewService()
 
-			if err := grpcclient.NewGRPCClient(svc); err != nil {
+			if err := grpcclient.NewGRPCClient(svc, server); err != nil {
 				log.Fatal("error initializing GRPC client: ", err)
 			}
 			var token string
@@ -60,7 +60,7 @@ var LoginCmd = &cobra.Command{
 			}
 			token = strings.Split(token, ":")[1]
 			token = strings.ReplaceAll(token, `"`, "")
-			viper.Set("host", server)
+			viper.Set("server", server)
 			viper.Set("token", token)
 			if err = viper.WriteConfig(); err != nil {
 				log.Fatal("Error writing configuration file: ", err)

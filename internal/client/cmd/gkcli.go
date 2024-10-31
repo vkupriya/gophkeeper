@@ -12,6 +12,7 @@ import (
 )
 
 var cfgFile string
+var server string
 
 // rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
@@ -27,11 +28,11 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.gk.yaml)")
+	rootCmd.PersistentFlags().StringVar(&server, "server", "127.0.0.1:3200", "gophkeeper server address:port")
 	rootCmd.AddCommand(InitCmd)
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(login.LoginCmd)
 	rootCmd.AddCommand(secret.SecretCmd)
-
 }
 
 func Execute() {
@@ -50,7 +51,6 @@ func initConfig() {
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
 
-		// Search config in home directory with name ".cobra" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigType("yaml")
 		viper.SetConfigName(".gk.yaml")
@@ -58,9 +58,7 @@ func initConfig() {
 
 	viper.AutomaticEnv()
 
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-	} else {
+	if err := viper.ReadInConfig(); err != nil {
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
 
@@ -69,4 +67,5 @@ func initConfig() {
 			log.Fatal()
 		}
 	}
+	fmt.Println("Using config file:", viper.ConfigFileUsed())
 }

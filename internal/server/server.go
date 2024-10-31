@@ -54,6 +54,14 @@ func Start(logger *zap.Logger) error {
 		return nil
 	})
 
+	g.Go(func() error {
+		defer logger.Sugar().Info("closed Postgres DB")
+
+		<-ctx.Done()
+
+		s.Close()
+		return nil
+	})
 	if err := g.Wait(); err != nil {
 		return fmt.Errorf("go routines stopped with error: %w", err)
 	}

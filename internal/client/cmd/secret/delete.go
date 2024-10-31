@@ -14,19 +14,23 @@ var DeleteCmd = &cobra.Command{
 	Short: "delete secret",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
+		server := viper.GetViper().GetString(hostGRPC)
+		if server == "" {
+			log.Fatal(msgErrMissingGRPCServer)
+		}
 
-		token := viper.GetViper().GetString("token")
+		token := viper.GetViper().GetString(tokenJWT)
 		if token == "" {
-			fmt.Printf("Missing token, please, login.")
+			log.Fatal(msgErrMissingToken)
 		}
 
 		svc := grpcclient.NewService()
 
-		if err := grpcclient.NewGRPCClient(svc); err != nil {
-			fmt.Println("error initializing GRPC client: ", err)
+		if err := grpcclient.NewGRPCClient(svc, server); err != nil {
+			log.Fatal(msgErrInitGRPC, err)
 		}
 
-		name, _ := cmd.Flags().GetString("name")
+		name, _ := cmd.Flags().GetString(secretName)
 
 		err := svc.DeleteSecret(token, name)
 		if err != nil {
@@ -36,7 +40,7 @@ var DeleteCmd = &cobra.Command{
 }
 
 func init() {
-	DeleteCmd.Flags().StringP("name", "n", "", "Secret name.")
+	DeleteCmd.Flags().StringP(secretName, "n", "", "Secret name.")
 	if err := DeleteCmd.MarkFlagRequired("name"); err != nil {
 		log.Fatal(err)
 	}

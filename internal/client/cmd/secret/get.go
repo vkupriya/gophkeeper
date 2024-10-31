@@ -18,19 +18,23 @@ var GetCmd = &cobra.Command{
 	Short: "Get secret",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
+		server := viper.GetViper().GetString(hostGRPC)
+		if server == "" {
+			log.Fatal(msgErrMissingGRPCServer)
+		}
 
-		token := viper.GetViper().GetString("token")
+		token := viper.GetViper().GetString(tokenJWT)
 		if token == "" {
-			fmt.Printf("Missing token, please, login.")
+			log.Fatal(msgErrMissingToken)
 		}
 		key := viper.GetViper().GetString("secretkey")
 		if key == "" {
-			fmt.Printf("Missing secretkey, update configuration file.")
+			log.Fatal("Missing secretkey, update configuration file")
 		}
 		svc := grpcclient.NewService()
 
-		if err := grpcclient.NewGRPCClient(svc); err != nil {
-			fmt.Println("error initializing GRPC client: ", err)
+		if err := grpcclient.NewGRPCClient(svc, server); err != nil {
+			log.Fatal(msgErrInitGRPC, err)
 		}
 
 		name, _ := cmd.Flags().GetString("name")
@@ -47,7 +51,12 @@ var GetCmd = &cobra.Command{
 				if err != nil {
 					log.Fatal("Error in setting up DB: ", err)
 				}
-				defer store.DB.Close()
+				defer func() {
+					if err := store.DB.Close(); err != nil {
+						log.Fatal("failed to close local DB")
+					}
+				}()
+
 				secret, err = store.SecretGet(name)
 				if err != nil {
 					if errors.Is(err, storage.ErrSecretNotFound) {
@@ -90,7 +99,7 @@ var GetCmd = &cobra.Command{
 }
 
 func init() {
-	GetCmd.Flags().StringP("name", "n", "", "Secret name.")
+	GetCmd.Flags().StringP(secretName, "n", "", "Secret name.")
 	if err := GetCmd.MarkFlagRequired("name"); err != nil {
 		log.Fatal(err)
 	}
