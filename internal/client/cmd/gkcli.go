@@ -32,7 +32,6 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&server, "server", "127.0.0.1:3200", "gophkeeper server address:port")
 	rootCmd.PersistentFlags().StringVar(&dbpath, "dbpath", "./secrets.db", "path to sqlite local database")
 	rootCmd.AddCommand(InitCmd)
-	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(login.LoginCmd)
 	rootCmd.AddCommand(secret.SecretCmd)
 }
