@@ -79,3 +79,98 @@ func TestListSecrets(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, secrets, secretsExpected)
 }
+
+func TestAddSecret(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	m := mocks.NewMockGophKeeperClient(ctrl)
+
+	m.EXPECT().AddSecret(gomock.Any(), gomock.Any()).Return(&pb.Empty{}, nil)
+	card := "{'card':'0123456789876','name': 'Super Agent', 'expiry': '02/25', 'cvv':'555'}"
+	secret := &models.Secret{
+		Name:    "card01",
+		Type:    "card",
+		Meta:    "metadata",
+		Data:    []byte(card),
+		Version: 1,
+	}
+	svc := NewService()
+	svc.clientGRPC = m
+
+	err := svc.AddSecret("token", "encryptionkey", secret)
+	require.NoError(t, err)
+}
+
+func TestGetSecret(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	card := "{'card':'0123456789876','name': 'Super Agent', 'expiry': '02/25', 'cvv':'555'}"
+
+	m := mocks.NewMockGophKeeperClient(ctrl)
+
+	m.EXPECT().GetSecret(gomock.Any(), gomock.Any()).Return(&pb.GetSecretResponse{
+		Secret: &pb.Secret{
+			Name:    "card01",
+			Type:    pb.SecretType_CARD,
+			Meta:    "metadata",
+			Data:    []byte(card),
+			Version: 1,
+		},
+	}, nil)
+
+	secretExpected := &models.Secret{
+		Name:    "card01",
+		Type:    "card",
+		Meta:    "metadata",
+		Data:    []byte(card),
+		Version: 1,
+	}
+	svc := NewService()
+	svc.clientGRPC = m
+
+	secret, err := svc.GetSecret("token", "encryptionkey", "card01")
+	require.NoError(t, err)
+	require.Equal(t, secret, secretExpected)
+}
+
+func TestUpdateSecret(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	card := "{'card':'0123456789876','name': 'Super Agent', 'expiry': '02/25', 'cvv':'555'}"
+
+	m := mocks.NewMockGophKeeperClient(ctrl)
+
+	m.EXPECT().UpdateSecret(gomock.Any(), gomock.Any()).Return(&pb.Empty{}, nil)
+
+	secret := &models.Secret{
+		Name:    "card01",
+		Type:    "card",
+		Meta:    "metadata",
+		Data:    []byte(card),
+		Version: 1,
+	}
+
+	svc := NewService()
+	svc.clientGRPC = m
+
+	err := svc.UpdateSecret("token", "encryptionkey", secret)
+	require.NoError(t, err)
+}
+
+func TestDeleteSecret(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	m := mocks.NewMockGophKeeperClient(ctrl)
+
+	m.EXPECT().DeleteSecret(gomock.Any(), gomock.Any()).Return(&pb.Empty{}, nil)
+
+	svc := NewService()
+	svc.clientGRPC = m
+
+	err := svc.DeleteSecret("token", "card01")
+	require.NoError(t, err)
+}
