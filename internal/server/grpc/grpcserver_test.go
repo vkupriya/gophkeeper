@@ -104,8 +104,8 @@ func TestUserRegister(t *testing.T) {
 	defer closer()
 
 	type expectation struct {
-		out *pb.UserAuthToken
-		err error
+		out  *pb.UserAuthToken
+		code codes.Code
 	}
 
 	tests := map[string]struct {
@@ -114,12 +114,22 @@ func TestUserRegister(t *testing.T) {
 	}{
 		"Register_Success": {
 			in: &pb.User{
-				Login:    RandStringRunes(10),
-				Password: "password",
+				Login:    "user01",
+				Password: "pass",
 			},
 			expected: expectation{
-				out: &pb.UserAuthToken{},
-				err: nil,
+				out:  &pb.UserAuthToken{},
+				code: codes.Code(code.Code_OK),
+			},
+		},
+		"Register_Fail_InvalidArgument": {
+			in: &pb.User{
+				Login:    "user01",
+				Password: "",
+			},
+			expected: expectation{
+				out:  &pb.UserAuthToken{},
+				code: codes.Code(code.Code_INVALID_ARGUMENT),
 			},
 		},
 	}
@@ -128,13 +138,12 @@ func TestUserRegister(t *testing.T) {
 		t.Run(test, func(t *testing.T) {
 			out, err := client.Register(ctx, tt.in)
 			if err != nil {
-				if tt.expected.err.Error() != err.Error() {
-					t.Errorf("Err -> \nWant: %q\nGot: %q\n", tt.expected.err, err)
+				status, _ := status.FromError(err)
+				if tt.expected.code != status.Code() {
+					t.Errorf("Err -> \nWant: %q\nGot: %q\n", tt.expected.code, status.Code())
 				}
-			} else {
-				if out.Token == "" {
-					t.Errorf("Out -> \nWant: %q\nGot : %q", tt.expected.out, out)
-				}
+			} else if out.Token == "" {
+				t.Errorf("Out -> \nWant: %q\nGot : %q", tt.expected.out, out)
 			}
 		})
 	}
@@ -157,7 +166,7 @@ func TestUserLogin(t *testing.T) {
 	}{
 		"Login_Success": {
 			in: &pb.User{
-				Login:    "vkupriya",
+				Login:    "user01",
 				Password: "pass",
 			},
 			expected: expectation{
@@ -167,12 +176,22 @@ func TestUserLogin(t *testing.T) {
 		},
 		"Login_PermissionDenied": {
 			in: &pb.User{
-				Login:    "vkupriya",
+				Login:    "user01",
 				Password: "passss",
 			},
 			expected: expectation{
 				out:  &pb.UserAuthToken{},
 				code: codes.PermissionDenied,
+			},
+		},
+		"Login_UserNotFound": {
+			in: &pb.User{
+				Login:    "user99",
+				Password: "passss",
+			},
+			expected: expectation{
+				out:  &pb.UserAuthToken{},
+				code: codes.NotFound,
 			},
 		},
 	}
@@ -199,7 +218,7 @@ func TestSecretAdd(t *testing.T) {
 	defer closer()
 
 	out, _ := client.Login(ctx, &pb.User{
-		Login:    "vkupriya",
+		Login:    "user01",
 		Password: "pass",
 	})
 	token := out.Token
@@ -254,7 +273,7 @@ func TestSecretGet(t *testing.T) {
 	defer closer()
 
 	out, _ := client.Login(ctx, &pb.User{
-		Login:    "vkupriya",
+		Login:    "user01",
 		Password: "pass",
 	})
 	token := out.Token
@@ -289,6 +308,15 @@ func TestSecretGet(t *testing.T) {
 				code: codes.Code(code.Code_OK),
 			},
 		},
+		"SecretGet_Fail_NotFound": {
+			in: &pb.GetSecretRequest{
+				Name: "secret99",
+			},
+			expected: expectation{
+				out:  &pb.GetSecretResponse{},
+				code: codes.NotFound,
+			},
+		},
 	}
 
 	for test, tt := range tests {
@@ -314,7 +342,7 @@ func TestSecretUpdate(t *testing.T) {
 	defer closer()
 
 	out, _ := client.Login(ctx, &pb.User{
-		Login:    "vkupriya",
+		Login:    "user01",
 		Password: "pass",
 	})
 	token := out.Token
@@ -347,6 +375,21 @@ func TestSecretUpdate(t *testing.T) {
 				code: codes.Code(code.Code_OK),
 			},
 		},
+		"SecretUpdate_Fail_NotFound": {
+			in: &pb.UpdateSecretRequest{
+				Secret: &pb.Secret{
+					Name:    "secret99",
+					Type:    pb.SecretType_TEXT,
+					Meta:    "very important secret",
+					Data:    []byte("secret"),
+					Version: 0,
+				},
+			},
+			expected: expectation{
+				out:  &pb.Empty{},
+				code: codes.NotFound,
+			},
+		},
 	}
 
 	for test, tt := range tests {
@@ -370,7 +413,7 @@ func TestSecretList(t *testing.T) {
 	defer closer()
 
 	out, _ := client.Login(ctx, &pb.User{
-		Login:    "vkupriya",
+		Login:    "user01",
 		Password: "pass",
 	})
 	token := out.Token
@@ -388,7 +431,7 @@ func TestSecretList(t *testing.T) {
 		in       *pb.Empty
 		expected expectation
 	}{
-		"SecretUpdate_Success": {
+		"SecretGetList_Success": {
 			in: &pb.Empty{},
 			expected: expectation{
 				out:  &pb.ListSecretsResponse{},
@@ -419,7 +462,7 @@ func TestSecretDelete(t *testing.T) {
 	defer closer()
 
 	out, _ := client.Login(ctx, &pb.User{
-		Login:    "vkupriya",
+		Login:    "user01",
 		Password: "pass",
 	})
 	token := out.Token
@@ -444,6 +487,15 @@ func TestSecretDelete(t *testing.T) {
 			expected: expectation{
 				out:  &pb.Empty{},
 				code: codes.Code(code.Code_OK),
+			},
+		},
+		"SecretDelete_Fail_NotFound": {
+			in: &pb.DeleteSecretRequest{
+				Name: "secret99",
+			},
+			expected: expectation{
+				out:  &pb.Empty{},
+				code: codes.NotFound,
 			},
 		},
 	}

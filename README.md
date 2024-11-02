@@ -1,7 +1,7 @@
 GophKeeper is a client-server secret manager.
 
 
-## Текущий стату
+## Текущий статуc
 
 * Тесты покрытие 35.9% (надо добавить тесты для клиента)
 * Надо добавить doc коментарии
@@ -18,7 +18,7 @@ go test -v -coverpkg=./... -coverprofile=profile.temp ./... -tags=integration
 Удаляем сгенерированные файлы mock*.go из профиля, чтобы не влияли на результат вычисления покрытия
 
 ```bash
-cat profile.temp | egrep -v "mock_store.go|test/main|staticlint|keygen|proto|.pb.go" > profile.cov
+cat profile.temp | egrep -v "mock_|staticlint|keygen|proto|.pb.go" > profile.cov
 
 ```
 
@@ -30,4 +30,10 @@ Use html view to observe code lines coverage with testing:
 
 ```bash
 go tool cover -html=profile.cov -o coverage.html
+```
+
+## GRPC Client Mocks generation
+
+```bash
+mockgen -destination=internal/proto/mocks/mock_service_client.go -package=mocks -source=internal/proto/service_grpc.pb.go GophKeeperClient
 ```

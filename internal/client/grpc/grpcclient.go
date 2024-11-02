@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/vkupriya/gophkeeper/internal/client/models"
 	pb "github.com/vkupriya/gophkeeper/internal/proto"
@@ -28,7 +29,6 @@ func NewService() *Service {
 }
 
 func NewGRPCClient(s *Service, grpcHost string) error {
-
 	conn, err := grpc.NewClient(grpcHost, grpc.WithTransportCredentials((insecure.NewCredentials())))
 	if err != nil {
 		return fmt.Errorf("failed to create GRPC client: %w", err)
@@ -40,25 +40,30 @@ func NewGRPCClient(s *Service, grpcHost string) error {
 }
 
 func (s *Service) Register(user string, password string) (string, error) {
-	token, err := s.clientGRPC.Register(context.Background(), &pb.User{
+	authToken, err := s.clientGRPC.Register(context.Background(), &pb.User{
 		Login:    user,
 		Password: password,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to register: %w", err)
 	}
-	return token.String(), nil
+
+	token := strings.Split(authToken.String(), ":")[1]
+	token = strings.ReplaceAll(token, `"`, "")
+	return token, nil
 }
 
 func (s *Service) Login(user string, password string) (string, error) {
-	token, err := s.clientGRPC.Login(context.Background(), &pb.User{
+	authToken, err := s.clientGRPC.Login(context.Background(), &pb.User{
 		Login:    user,
 		Password: password,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to login: %w", err)
 	}
-	return token.String(), nil
+	token := strings.Split(authToken.String(), ":")[1]
+	token = strings.ReplaceAll(token, `"`, "")
+	return token, nil
 }
 
 func (s *Service) ListSecrets(t string) ([]*models.SecretItem, error) {
@@ -83,7 +88,7 @@ func (s *Service) ListSecrets(t string) ([]*models.SecretItem, error) {
 	for _, secret := range secrets.Items {
 		resultItems = append(resultItems, &models.SecretItem{
 			Name:    secret.GetName(),
-			Type:    "text",
+			Type:    ProtoToType(secret.GetType()),
 			Version: secret.GetVersion(),
 		})
 	}
@@ -99,7 +104,7 @@ func (s *Service) AddSecret(t string, key string, secret *models.Secret) error {
 		Name:    secret.Name,
 		Meta:    secret.Meta,
 		Data:    secret.Data,
-		Type:    pb.SecretType(models.TypeToProto(secret.Type)),
+		Type:    TypeToProto(secret.Type),
 		Version: secret.Version,
 	}
 
@@ -125,7 +130,7 @@ func (s *Service) UpdateSecret(t string, key string, secret *models.Secret) erro
 			Name: secret.Name,
 			Meta: secret.Meta,
 			Data: secret.Data,
-			Type: 1,
+			Type: TypeToProto(secret.Type),
 		},
 	})
 	if err != nil {
@@ -159,7 +164,7 @@ func (s *Service) GetSecret(t string, key string, name string) (*models.Secret, 
 
 	secret := models.Secret{
 		Name:    resp.Secret.GetName(),
-		Type:    models.ProtoToType(int32(resp.Secret.Type)),
+		Type:    ProtoToType(resp.Secret.Type),
 		Meta:    resp.Secret.GetMeta(),
 		Data:    resp.Secret.GetData(),
 		Version: resp.Secret.GetVersion(),
@@ -179,4 +184,38 @@ func (s *Service) DeleteSecret(t string, name string) error {
 	}
 
 	return nil
+}
+
+func TypeToProto(st string) pb.SecretType {
+	switch st {
+	case "text":
+		return pb.SecretType_TEXT
+	case "binary":
+		return pb.SecretType_BINARY
+	case "card":
+		return pb.SecretType_CARD
+	case "file":
+		return pb.SecretType_FILE
+	case "unknown":
+		return pb.SecretType_UNKNOWN
+	default:
+		return pb.SecretType_UNKNOWN
+	}
+}
+
+func ProtoToType(st pb.SecretType) string {
+	switch st {
+	case pb.SecretType_TEXT:
+		return "text"
+	case pb.SecretType_BINARY:
+		return "binary"
+	case pb.SecretType_CARD:
+		return "card"
+	case pb.SecretType_FILE:
+		return "file"
+	case pb.SecretType_UNKNOWN:
+		return "unknown"
+	default:
+		return "unknown"
+	}
 }

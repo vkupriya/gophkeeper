@@ -154,7 +154,7 @@ func (g *GophKeeperServer) ListSecrets(ctx context.Context, in *pb.Empty) (*pb.L
 	for _, dbItem := range *secretsDB {
 		response.Items = append(response.Items, &pb.SecretItem{
 			Name:    dbItem.Name,
-			Type:    pb.SecretType_TEXT,
+			Type:    TypeToProto(dbItem.Type),
 			Version: dbItem.Version,
 		})
 	}
@@ -180,7 +180,7 @@ func (g *GophKeeperServer) AddSecret(ctx context.Context, in *pb.AddSecretReques
 	secret := &models.Secret{
 		Name:    in.Secret.GetName(),
 		Meta:    in.Secret.GetMeta(),
-		Type:    models.ProtoToType(int32(in.Secret.Type)),
+		Type:    ProtoToType(in.Secret.Type),
 		Data:    dataEncrypted,
 		Version: 1,
 	}
@@ -217,7 +217,7 @@ func (g *GophKeeperServer) UpdateSecret(
 	secret := &models.Secret{
 		Name: in.Secret.GetName(),
 		Meta: in.Secret.GetMeta(),
-		Type: models.ProtoToType(int32(in.Secret.Type)),
+		Type: ProtoToType(in.Secret.Type),
 		Data: dataEncrypted,
 	}
 	err = g.Store.SecretUpdate(g.config, userid, secret)
@@ -260,7 +260,7 @@ func (g *GophKeeperServer) GetSecret(ctx context.Context, in *pb.GetSecretReques
 	response = pb.GetSecretResponse{
 		Secret: &pb.Secret{
 			Name:    s.Name,
-			Type:    pb.SecretType(models.TypeToProto(s.Type)),
+			Type:    TypeToProto(s.Type),
 			Meta:    s.Meta,
 			Data:    *data,
 			Version: s.Version,
@@ -334,4 +334,38 @@ func Run(ctx context.Context, s Storage, c *models.Config) error {
 		return fmt.Errorf("failed to run grpc server: %w", err)
 	}
 	return nil
+}
+
+func TypeToProto(st string) pb.SecretType {
+	switch st {
+	case "text":
+		return pb.SecretType_TEXT
+	case "binary":
+		return pb.SecretType_BINARY
+	case "card":
+		return pb.SecretType_CARD
+	case "file":
+		return pb.SecretType_FILE
+	case "unknown":
+		return pb.SecretType_UNKNOWN
+	default:
+		return pb.SecretType_UNKNOWN
+	}
+}
+
+func ProtoToType(st pb.SecretType) string {
+	switch st {
+	case pb.SecretType_TEXT:
+		return "text"
+	case pb.SecretType_BINARY:
+		return "binary"
+	case pb.SecretType_CARD:
+		return "card"
+	case pb.SecretType_FILE:
+		return "file"
+	case pb.SecretType_UNKNOWN:
+		return "unknown"
+	default:
+		return "unknown"
+	}
 }

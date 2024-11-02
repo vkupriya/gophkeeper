@@ -3,7 +3,6 @@ package login
 import (
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -60,8 +59,6 @@ var LoginCmd = &cobra.Command{
 					log.Fatal("login error: ", err)
 				}
 			}
-			token = strings.Split(token, ":")[1]
-			token = strings.ReplaceAll(token, `"`, "")
 			viper.Set(serverStr, server)
 			viper.Set("token", token)
 			if err = viper.WriteConfig(); err != nil {
