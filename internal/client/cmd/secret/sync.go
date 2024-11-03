@@ -2,7 +2,6 @@ package secret
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -15,56 +14,63 @@ var SyncCmd = &cobra.Command{
 	Short: "sync secrets with Gophkeeper server",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
+		var msg string
 		server := viper.GetViper().GetString(hostGRPC)
 		if server == "" {
-			log.Fatal(msgErrMissingGRPCServer)
+			cobra.CheckErr(msgErrMissingGRPCServer)
 		}
 		token := viper.GetViper().GetString(tokenJWT)
 		if token == "" {
-			log.Fatal(msgErrMissingToken)
+			cobra.CheckErr(msgErrMissingToken)
 		}
 
 		key := viper.GetViper().GetString("secretkey")
 		if key == "" {
-			log.Fatal("Missing secretkey, update configuration file.")
+			cobra.CheckErr("Missing secretkey, update configuration file.")
 		}
 
 		dbpath, _ := cmd.Flags().GetString("dbpath")
 		if dbpath == "" {
-			log.Fatal(msgErrNoDBPath)
+			cobra.CheckErr(msgErrNoDBPath)
 		}
 
 		store, err := storage.NewSQLiteDB(dbpath)
 		if err != nil {
-			log.Fatal(msgErrInitGRPC, err)
+			msg = fmt.Sprint(msgErrInitGRPC, err)
+			cobra.CheckErr(msg)
 		}
 
 		svc := grpcclient.NewService()
 
 		if err := grpcclient.NewGRPCClient(svc, server); err != nil {
-			log.Fatal("error initializing GRPC client: ", err)
+			msg = fmt.Sprintf("error initializing GRPC client: %v ", err)
+			cobra.CheckErr(msg)
 		}
 
 		secretsRemote, err := svc.ListSecrets(token)
 		if err != nil {
-			log.Fatal("error getting list of secrets: ", err)
+			msg = fmt.Sprintf("error getting list of secrets: %v", err)
+			cobra.CheckErr(msg)
 		}
 
 		// dropping all stored secrets in local DB
 		err = store.SecretDeleteAll()
 		if err != nil {
-			log.Fatal("error deleting secrets in local database before sync: ", err)
+			msg = fmt.Sprintf("error deleting secrets in local database before sync: %v", err)
+			cobra.CheckErr(msg)
 		}
 
 		for _, secret := range secretsRemote {
 			remoteItem, err := svc.GetSecret(token, key, secret.Name)
 			if err != nil {
-				log.Fatal("error getting secret: ", err)
+				msg = fmt.Sprintf("error getting secret: %v ", err)
+				cobra.CheckErr(msg)
 			}
 			// Inserting secret into local DB
 			err = store.SecretAdd(remoteItem)
 			if err != nil {
-				log.Fatal("error inserting secret into local DB: ", err)
+				msg = fmt.Sprintf("error inserting secret into local DB: %v", err)
+				cobra.CheckErr(msg)
 			}
 		}
 		fmt.Println("successfully synchronised secret db.")

@@ -2,7 +2,6 @@ package login
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -19,14 +18,13 @@ var LoginCmd = &cobra.Command{
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Check host flag
+		var msg string
 		server, _ := cmd.Flags().GetString(serverStr)
 		if server == "" {
 			server = viper.GetViper().GetString(serverStr)
 		}
 		if server == "" {
-			log.Fatal("server not specified.")
-		} else {
-			fmt.Println("server:", server)
+			cobra.CheckErr("server not specified.")
 		}
 		// Check user flag
 		user, _ := cmd.Flags().GetString("user")
@@ -34,7 +32,7 @@ var LoginCmd = &cobra.Command{
 			// Try and get token from config
 			token := viper.GetViper().GetString("token")
 			if token == "" {
-				fmt.Println("Login failed, no user specified.")
+				cobra.CheckErr("Login failed, no user specified.")
 			}
 		} else {
 			// Get password for the user
@@ -43,7 +41,8 @@ var LoginCmd = &cobra.Command{
 			svc := grpcclient.NewService()
 
 			if err := grpcclient.NewGRPCClient(svc, server); err != nil {
-				log.Fatal("error initializing GRPC client: ", err)
+				msg = fmt.Sprintf("error initializing GRPC client: %v", err)
+				cobra.CheckErr(msg)
 			}
 			var token string
 			var err error
@@ -51,18 +50,21 @@ var LoginCmd = &cobra.Command{
 			if reg {
 				token, err = svc.Register(user, password)
 				if err != nil {
-					log.Fatal("error registering user: ", err)
+					msg = fmt.Sprintf("error registering user: %v", err)
+					cobra.CheckErr(msg)
 				}
 			} else {
 				token, err = svc.Login(user, password)
 				if err != nil {
-					log.Fatal("login error: ", err)
+					msg = fmt.Sprintf("login error: %v ", err)
+					cobra.CheckErr(msg)
 				}
 			}
 			viper.Set(serverStr, server)
 			viper.Set("token", token)
 			if err = viper.WriteConfig(); err != nil {
-				log.Fatal("Error writing configuration file: ", err)
+				msg = fmt.Sprintf("Error writing configuration file: %v", err)
+				cobra.CheckErr(msg)
 			}
 		}
 	},

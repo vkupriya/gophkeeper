@@ -2,7 +2,6 @@ package gkcli
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -34,6 +33,7 @@ func init() {
 	rootCmd.AddCommand(InitCmd)
 	rootCmd.AddCommand(login.LoginCmd)
 	rootCmd.AddCommand(secret.SecretCmd)
+	rootCmd.AddCommand(VersionCmd)
 }
 
 func Execute() {
@@ -65,7 +65,7 @@ func initConfig() {
 
 		_, err = os.Create(home + "/.gk.yaml")
 		if err != nil {
-			log.Fatal()
+			cobra.CheckErr("failed creating config file.")
 		}
 	}
 	fmt.Println("Using config file:", viper.ConfigFileUsed())

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"log"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -22,31 +21,29 @@ var GetCmd = &cobra.Command{
 	Short: "Get secret",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
+		var msg string
 		server := viper.GetViper().GetString(hostGRPC)
 		if server == "" {
-			log.Fatal(msgErrMissingGRPCServer)
+			cobra.CheckErr(msgErrMissingGRPCServer)
 		}
 
 		token := viper.GetViper().GetString(tokenJWT)
 		if token == "" {
-			log.Fatal(msgErrMissingToken)
+			cobra.CheckErr(msgErrMissingToken)
 		}
 		key := viper.GetViper().GetString("secretkey")
 		if key == "" {
-			log.Fatal("Missing secretkey, update configuration file")
+			cobra.CheckErr("Missing secretkey, update configuration file")
 		}
 		svc := grpcclient.NewService()
 
 		if err := grpcclient.NewGRPCClient(svc, server); err != nil {
-			log.Fatal(msgErrInitGRPC, err)
+			msg = fmt.Sprint(msgErrInitGRPC, err)
+			cobra.CheckErr(msg)
 		}
 
 		name, _ := cmd.Flags().GetString("name")
 		filepath, _ := cmd.Flags().GetString("outfile")
-
-		if name == "" {
-			log.Fatal("no secret provided.")
-		}
 
 		secret, err := svc.GetSecret(token, key, name)
 		if err != nil {
@@ -54,47 +51,53 @@ var GetCmd = &cobra.Command{
 				fmt.Println("server is unavailable, attempting to read secret from local DB.")
 				dbpath, _ := cmd.Flags().GetString("dbpath")
 				if dbpath == "" {
-					log.Fatal(msgErrNoDBPath)
+					cobra.CheckErr(msgErrNoDBPath)
 				}
 				store, err := storage.NewSQLiteDB(dbpath)
 				if err != nil {
-					log.Fatal("Error in setting up DB: ", err)
+					msg = fmt.Sprintf("Error in setting up DB: %v", err)
+					cobra.CheckErr(msg)
 				}
 				defer func() {
 					if err := store.DB.Close(); err != nil {
-						log.Fatal("failed to close local DB")
+						cobra.CheckErr("failed to close local DB")
 					}
 				}()
 
 				secret, err = store.SecretGet(name)
 				if err != nil {
 					if errors.Is(err, storage.ErrSecretNotFound) {
-						log.Fatal("secret not found in local DB")
+						cobra.CheckErr("secret not found in local DB")
 					}
-					fmt.Println("failed to read secrets from local DB", err)
+					msg = fmt.Sprintf("failed to read secrets from local DB: %v", err)
+					cobra.CheckErr(msg)
+
 				}
 			} else {
-				log.Fatal("error getting secret: ", err)
+				msg = fmt.Sprintf("error getting secret: %v", err)
+				cobra.CheckErr(msg)
 			}
 		}
 
 		if filepath != "" {
 			if secret.Type != "text" && secret.Type != "binary" {
-				log.Fatal("exporting to file only supported for 'text' and 'binary' types")
+				cobra.CheckErr("exporting to file only supported for 'text' and 'binary' types")
 			}
 
 			f, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE, FilePermissions)
 			if err != nil {
-				log.Fatalf("error opening file %s: %v ", filepath, err)
+				msg = fmt.Sprintf("error opening file %s: %v ", filepath, err)
+				cobra.CheckErr(msg)
 			}
 			defer func() {
 				if err := f.Close(); err != nil {
-					log.Fatal("failed to close file")
+					cobra.CheckErr("failed to close file")
 				}
 			}()
 			_, err = f.Write(secret.Data)
 			if err != nil {
-				log.Fatalf("error writing data to file %s: %v", filepath, err)
+				msg = fmt.Sprintf("error writing data to file %s: %v", filepath, err)
+				cobra.CheckErr(msg)
 			}
 
 		} else {
@@ -130,6 +133,6 @@ func init() {
 	GetCmd.Flags().StringP(secretName, "n", "", "Secret name.")
 	GetCmd.Flags().StringP("outfile", "f", "", "Export secret data into file for binary and text types.")
 	if err := GetCmd.MarkFlagRequired("name"); err != nil {
-		log.Fatal(err)
+		cobra.CheckErr(err)
 	}
 }

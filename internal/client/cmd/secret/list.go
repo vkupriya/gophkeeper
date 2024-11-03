@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -18,21 +17,23 @@ var ListCmd = &cobra.Command{
 	Short: "list secrets",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
+		var msg string
 		var secrets []*models.SecretItem
 		server := viper.GetViper().GetString(hostGRPC)
 		if server == "" {
-			log.Fatal(msgErrMissingGRPCServer)
+			cobra.CheckErr(msgErrMissingGRPCServer)
 		}
 
 		token := viper.GetViper().GetString(tokenJWT)
 		if token == "" {
-			log.Fatal(msgErrMissingToken)
+			cobra.CheckErr(msgErrMissingToken)
 		}
 
 		svc := grpcclient.NewService()
 
 		if err := grpcclient.NewGRPCClient(svc, server); err != nil {
-			log.Fatal(msgErrInitGRPC, err)
+			msg = fmt.Sprint(msgErrInitGRPC, err)
+			cobra.CheckErr(msg)
 		}
 
 		secrets, err := svc.ListSecrets(token)
@@ -41,30 +42,36 @@ var ListCmd = &cobra.Command{
 				fmt.Println("server is unavailable, attempting to read secrets from local DB.")
 				dbpath, _ := cmd.Flags().GetString("dbpath")
 				if dbpath == "" {
-					log.Fatal(msgErrNoDBPath)
+					cobra.CheckErr(msgErrNoDBPath)
 				}
 				store, err := storage.NewSQLiteDB(dbpath)
 				if err != nil {
-					log.Fatal("Error in setting up DB: ", err)
+					msg = fmt.Sprintf("Error in setting up DB: %v", err)
+					cobra.CheckErr(msg)
 				}
 				defer func() {
 					if err := store.DB.Close(); err != nil {
-						log.Fatal("failed to close local DB")
+						cobra.CheckErr("failed to close local DB")
 					}
 				}()
 
 				secrets, err = store.SecretList()
 				if err != nil {
-					log.Fatal("failed to read secrets from local DB", err)
+					msg = fmt.Sprintf("failed to read secrets from local DB: %v", err)
+					cobra.CheckErr(msg)
 				}
 
 			} else {
-				log.Fatal("error getting list of secrets: ", err)
+				msg = fmt.Sprintf("error getting list of secrets: %v", err)
+				cobra.CheckErr(msg)
 			}
 		}
 
 		if len(secrets) != 0 {
-			res, _ := json.MarshalIndent(secrets, "", "   ")
+			res, err := json.MarshalIndent(secrets, "", "   ")
+			if err != nil {
+				cobra.CheckErr(err)
+			}
 			fmt.Println(string(res))
 		}
 	},

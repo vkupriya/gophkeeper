@@ -2,7 +2,6 @@ package secret
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -18,22 +17,22 @@ var AddCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		server := viper.GetViper().GetString(hostGRPC)
 		if server == "" {
-			log.Fatal(msgErrMissingGRPCServer)
+			cobra.CheckErr(msgErrMissingGRPCServer)
 		}
 
 		token := viper.GetViper().GetString(tokenJWT)
 		if token == "" {
-			log.Fatal(msgErrMissingToken)
+			cobra.CheckErr(msgErrMissingToken)
 		}
 
 		key := viper.GetViper().GetString("secretkey")
 		if key == "" {
-			log.Fatal("Missing secretkey, update configuration file.")
+			cobra.CheckErr("Missing secretkey, update configuration file.")
 		}
 		svc := grpcclient.NewService()
 
 		if err := grpcclient.NewGRPCClient(svc, server); err != nil {
-			log.Fatal(msgErrInitGRPC, err)
+			cobra.CheckErr(err)
 		}
 		var data []byte
 		var err error
@@ -47,7 +46,8 @@ var AddCmd = &cobra.Command{
 		if file != "" {
 			data, err = os.ReadFile(file)
 			if err != nil {
-				log.Fatalf("failed to read file %s: %v", file, err)
+				msg := fmt.Sprintf("failed to read file %s: %v", file, err)
+				cobra.CheckErr(msg)
 			}
 		} else {
 			dataStr, _ := cmd.Flags().GetString("data")
