@@ -293,6 +293,7 @@ func (g *GophKeeperServer) DeleteSecret(ctx context.Context,
 }
 
 func Run(ctx context.Context, s Storage, c *models.Config) error {
+	const MaxSizeBytes = 10 * 1024 * 1024
 	logger := c.Logger
 	hostport := strings.Replace(c.Address, "http://", "", 1)
 	grpcHost := strings.Split(hostport, ":")[0]
@@ -307,6 +308,8 @@ func Run(ctx context.Context, s Storage, c *models.Config) error {
 
 	srv := grpc.NewServer(
 		grpc.UnaryInterceptor(ic.AuthInterceptor(c)),
+		grpc.MaxRecvMsgSize(MaxSizeBytes),
+		grpc.MaxSendMsgSize(MaxSizeBytes),
 	)
 
 	pb.RegisterGophKeeperServer(srv, &GophKeeperServer{

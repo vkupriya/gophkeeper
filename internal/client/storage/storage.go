@@ -102,6 +102,21 @@ func (s *SQLiteDB) SecretList() ([]*models.SecretItem, error) {
 	return secrets, nil
 }
 
+func (s *SQLiteDB) SecretDelete(name string) error {
+	db := s.DB
+	ctx, cancel := context.WithTimeout(context.Background(), ctxTimeoutDefault)
+	defer cancel()
+
+	querySQL := "DELETE FROM secrets WHERE name=?"
+
+	_, err := db.ExecContext(ctx, querySQL, name)
+	if err != nil {
+		return fmt.Errorf("error deleting secret %s: %w", name, err)
+	}
+
+	return nil
+}
+
 func (s *SQLiteDB) SecretDeleteAll() error {
 	db := s.DB
 	ctx, cancel := context.WithTimeout(context.Background(), ctxTimeoutDefault)
@@ -127,6 +142,20 @@ func (s *SQLiteDB) SecretAdd(secret *models.Secret) error {
 	_, err := db.ExecContext(ctx, querySQL, secret.Name, secret.Type, secret.Meta, secret.Data, secret.Version)
 	if err != nil {
 		return fmt.Errorf("failed to insert secret %s into SQLiteDB: %w", secret.Name, err)
+	}
+	return nil
+}
+
+func (s *SQLiteDB) SecretUpdate(secret *models.Secret) error {
+	db := s.DB
+	ctx, cancel := context.WithTimeout(context.Background(), ctxTimeoutDefault)
+	defer cancel()
+
+	querySQL := "UPDATE secrets SET type=?, meta=?, data=?, version=? WHERE name=?"
+
+	_, err := db.ExecContext(ctx, querySQL, secret.Type, secret.Meta, secret.Data, secret.Version, secret.Name)
+	if err != nil {
+		return fmt.Errorf("failed to update secret %s in SQLiteDB: %w", secret.Name, err)
 	}
 	return nil
 }

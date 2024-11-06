@@ -8,11 +8,13 @@ import (
 	"github.com/spf13/viper"
 	"github.com/vkupriya/gophkeeper/internal/client/cmd/login"
 	"github.com/vkupriya/gophkeeper/internal/client/cmd/secret"
+	"go.uber.org/zap"
 )
 
 var cfgFile string
 var server string
 var dbpath string
+var Logger *zap.Logger
 
 // rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{

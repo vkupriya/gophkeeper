@@ -53,6 +53,11 @@ var GetCmd = &cobra.Command{
 				if dbpath == "" {
 					cobra.CheckErr(msgErrNoDBPath)
 				}
+
+				if _, err := os.Stat(dbpath); errors.Is(err, os.ErrNotExist) {
+					cobra.CheckErr("local DB does not exists, run 'init' command to create DB")
+				}
+
 				store, err := storage.NewSQLiteDB(dbpath)
 				if err != nil {
 					msg = fmt.Sprintf("Error in setting up DB: %v", err)
