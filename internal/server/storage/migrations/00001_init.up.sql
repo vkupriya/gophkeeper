@@ -1,0 +1,19 @@
+BEGIN TRANSACTION;
+
+CREATE TABLE users(
+    userid VARCHAR(200) UNIQUE NOT NULL,
+    password VARCHAR(200) NOT NULL,
+    PRIMARY KEY (userid)
+);
+
+CREATE TABLE secrets(
+    userid VARCHAR(200) NOT NULL,
+    name VARCHAR(200) UNIQUE NOT NULL,
+    type VARCHAR(32) NOT NULL,
+    meta VARCHAR(255),
+    data BYTEA NOT NULL,
+    version BIGINT NOT NULL,
+    PRIMARY KEY (name)
+);
+
+COMMIT;

@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package proto;
+
+import "internal/proto/user.proto";
+import "internal/proto/secret.proto";
+
+option go_package = "internal/proto";
+
+message Empty {}
+
+service GophKeeper {
+  // User
+  rpc Register(User) returns (UserAuthToken);
+  rpc Login(User) returns (UserAuthToken);
+  rpc AddSecret(AddSecretRequest) returns (Empty);
+  rpc UpdateSecret(UpdateSecretRequest) returns (Empty);
+  rpc GetSecret(GetSecretRequest) returns (GetSecretResponse);
+  rpc DeleteSecret(DeleteSecretRequest) returns (Empty);
+  rpc ListSecrets(Empty) returns (ListSecretsResponse);
+}
